@@ -14,45 +14,69 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useState } from "react";
+import Link from "next/link";
 
 export default function LoginPage() {
+  const [isLoading, setIsLoading] = useState(false);
+
   const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
-    const supabase = createClient();
+    setIsLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const formData = new FormData(event.currentTarget);
+      const email = formData.get("email") as string;
+      const password = formData.get("password") as string;
+      
+      if (!email || !password) {
+        throw new Error("Please fill in all fields");
+      }
+      
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      toast.error(error.message);
-    } else {
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+
       toast.success("Logged in successfully!");
       window.location.href = "/";
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "An error occurred");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleOAuthLogin = async (provider: "github" | "google") => {
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${location.origin}/auth/callback`,
-      },
-    });
+    try {
+      setIsLoading(true);
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${location.origin}/auth/callback`,
+        },
+      });
 
-    if (error) {
-      toast.error(error.message);
+      if (error) {
+        toast.error(error.message);
+      }
+    } catch (error) {
+      toast.error("Failed to connect with OAuth provider");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Card className="w-full max-w-sm">
+    <div className="flex items-center justify-center">
+      <Card className="w-full max-w-sm mx-auto">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl">Login</CardTitle>
           <CardDescription>
@@ -63,15 +87,19 @@ export default function LoginPage() {
           <CardContent className="grid gap-4">
             <div className="grid grid-cols-2 gap-6">
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => handleOAuthLogin("github")}
+                disabled={isLoading}
               >
                 <Icons.gitHub className="w-4 h-4 mr-2" />
                 Github
               </Button>
               <Button
+                type="button"
                 variant="outline"
                 onClick={() => handleOAuthLogin("google")}
+                disabled={isLoading}
               >
                 <Icons.google className="w-4 h-4 mr-2" />
                 Google
@@ -95,6 +123,7 @@ export default function LoginPage() {
                 name="email"
                 placeholder="m@example.com"
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="grid gap-2">
@@ -104,13 +133,20 @@ export default function LoginPage() {
                 type="password"
                 name="password"
                 required
+                disabled={isLoading}
               />
             </div>
           </CardContent>
-          <CardFooter>
-            <Button className="w-full" type="submit">
-              Login
+          <CardFooter className="flex flex-col gap-4">
+            <Button className="w-full" type="submit" disabled={isLoading}>
+              {isLoading ? "Logging in..." : "Login"}
             </Button>
+            <p className="text-sm text-center text-muted-foreground">
+              Don't have an account?{" "}
+              <Link href="/register" className="text-primary hover:underline">
+                Create an account
+              </Link>
+            </p>
           </CardFooter>
         </form>
       </Card>

@@ -27,10 +27,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background`}
       >
         <AuthProvider>
-          {children}
+          <main className="container mx-auto max-w-5xl py-8 px-4">
+            {children}
+          </main>
           <Toaster />
         </AuthProvider>
       </body>

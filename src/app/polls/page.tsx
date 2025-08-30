@@ -1,60 +1,67 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Poll } from '@/components/poll';
 import { createClient } from '@/utils/supabase/server';
 import Link from 'next/link';
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 export default async function PollsPage() {
-  const cookieStore = require('next/headers').cookies();
+  const cookieStore = cookies();
   const supabase = createClient(cookieStore);
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
 
   if (!user) {
     return redirect('/login');
   }
 
-  const { data: polls, error } = await supabase.from('polls').select('*');
+  // Fetch polls with options and votes count
+  const { data: polls, error: pollsError } = await supabase
+    .from('polls')
+    .select(`
+      *,
+      poll_options (count),
+      votes (count)
+    `)
+    .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching polls:', error);
-    // Handle error appropriately
+  if (pollsError) {
+    console.error('Error fetching polls:', pollsError);
+    return <div>Error loading polls</div>;
   }
 
   return (
-    <div className="container mx-auto py-8">
+    <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Latest Polls</h1>
+        <h1 className="text-2xl font-bold">Polls</h1>
         <Button asChild>
-          <Link href="/polls/create">Create New Poll</Link>
+          <Link href="/polls/create">Create Poll</Link>
         </Button>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {(polls || []).map((poll) => (
-          <Card key={poll.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle className="text-xl">{poll.question}</CardTitle>
-              <CardDescription>
-                {poll.total_votes} votes • Created on {new Date(poll.created_at).toLocaleDateString()}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-4 w-full bg-gray-200 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary" 
-                  style={{ width: `${Math.min(100, Math.floor(Math.random() * 100))}%` }}
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" className="w-full" asChild>
-                <Link href={`/polls/${poll.id}`}>View Poll</Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </div>
+      {polls?.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500 mb-4">No polls found</p>
+          <Button asChild>
+            <Link href="/polls/create">Create your first poll</Link>
+          </Button>
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2">
+          {polls?.map((poll) => (
+            <Poll
+              key={poll.id}
+              id={poll.id}
+              title={poll.title}
+              description={poll.description}
+              createdAt={poll.created_at}
+              isOwner={poll.created_by === user.id}
+              optionsCount={poll.poll_options?.[0]?.count ?? 0}
+              votesCount={poll.votes?.[0]?.count ?? 0}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
