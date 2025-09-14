@@ -3,9 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { PollService } from '@/lib/services/poll-service'
-import { AuthService } from '@/lib/services/auth-service'
+import { AuthServer } from '@/lib/services/auth-server'
 import { type PollFormData } from '@/lib/types'
-import { UnauthorizedError, NotFoundError } from '@/lib/types'
+import { UnauthorizedError } from '@/lib/types'
 import { handleError } from '@/lib/utils/error-handling'
 
 /**
@@ -13,11 +13,11 @@ import { handleError } from '@/lib/utils/error-handling'
  */
 export async function updatePoll(pollId: string, data: PollFormData) {
   try {
-    // Get current user
-    const { data: user, error: userError } = await AuthService.getCurrentUser()
+    // Get current user (server-side)
+    const { data: user, error: userError } = await AuthServer.getCurrentUser()
     
     if (userError || !user) {
-      throw new UnauthorizedError('You must be logged in to update a poll')
+      throw new UnauthorizedError()
     }
 
     // Update poll

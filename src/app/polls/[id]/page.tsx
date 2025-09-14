@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server"
-import { cookies } from "next/headers"
+import { serverSupabase } from "@/lib/supabase/server"
 import { notFound } from "next/navigation"
 import { VotePollForm } from "@/components/vote-poll-form"
 import { Button } from "@/components/ui/button"
@@ -25,8 +24,7 @@ export default async function PollPage({
 }: {
   params: { id: string }
 }) {
-  const cookieStore = cookies()
-  const supabase = createClient()
+  const supabase = serverSupabase.getClient()
 
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -62,7 +60,7 @@ export default async function PollPage({
   }
 
   // Calculate total votes
-  const totalVotes = poll.poll_options.reduce((sum: number, option: PollOption) => 
+  const totalVotes = (poll.poll_options as PollOption[]).reduce((sum: number, option: PollOption) => 
     sum + (option.votes?.[0]?.count || 0), 0
   )
 
@@ -94,7 +92,7 @@ export default async function PollPage({
           <div>
             <h2 className="text-xl font-semibold mb-4">Results</h2>
             <div className="space-y-4">
-              {poll.poll_options.map((option) => {
+              {(poll.poll_options as PollOption[]).map((option: PollOption) => {
                 const voteCount = option.votes?.[0]?.count || 0
                 const percentage = totalVotes > 0 
                   ? Math.round((voteCount / totalVotes) * 100) 
@@ -122,7 +120,7 @@ export default async function PollPage({
           </div>
         ) : (
           <VotePollForm
-            poll={poll}
+            poll={poll as unknown as Poll}
             userId={user?.id}
           />
         )}

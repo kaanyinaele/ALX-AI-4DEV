@@ -1,12 +1,11 @@
 'use client'
 
-import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { useRouter } from "next/navigation"
-import { toast } from "sonner"
-import { createClient } from "@/utils/supabase/client"
+import { usePollVoting } from "@/lib/hooks/use-poll"
+import { showErrorToast } from "@/lib/utils/error-handling"
 
 interface VotePollFormProps {
   poll: {
@@ -22,59 +21,32 @@ interface VotePollFormProps {
 }
 
 export function VotePollForm({ poll, userId }: VotePollFormProps) {
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
+  
+  // Use our custom hook to manage voting state and logic
+  const {
+    selectedOptions,
+    isSubmitting,
+    handleOptionChange,
+    handleSubmit,
+  } = usePollVoting(poll, userId)
 
-  const handleOptionChange = (optionId: string) => {
-    if (poll.is_multiple_choice) {
-      setSelectedOptions(prev => 
-        prev.includes(optionId)
-          ? prev.filter(id => id !== optionId)
-          : [...prev, optionId]
-      )
-    } else {
-      setSelectedOptions([optionId])
-    }
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (selectedOptions.length === 0) {
-      toast.error("Please select an option")
-      return
-    }
-
-    if (!userId) {
-      toast.error("Please log in to vote")
-      return
-    }
-
-    setIsSubmitting(true)
-
-    try {
-      const supabase = createClient()
-      const votes = selectedOptions.map(optionId => ({
-        poll_id: poll.id,
-        option_id: optionId,
-        voter_id: userId,
-      }))
-
-      const { error } = await supabase
-        .from('votes')
-        .insert(votes)
-
-      if (error) throw error
-
-      toast.success("Vote submitted successfully!")
-      router.refresh()
-    } catch (error) {
-      console.error("Error submitting vote:", error)
-      toast.error("Failed to submit vote")
-    } finally {
-      setIsSubmitting(false)
-    }
+  // Handle rendering based on user authentication status
+  if (!userId) {
+    return (
+      <Card className="p-6">
+        <div className="text-center">
+          <p className="mb-4">You need to be logged in to vote on this poll.</p>
+          <Button
+            type="button"
+            className="w-full"
+            onClick={() => router.push('/login')}
+          >
+            Login to Vote
+          </Button>
+        </div>
+      </Card>
+    );
   }
 
   return (
@@ -100,23 +72,13 @@ export function VotePollForm({ poll, userId }: VotePollFormProps) {
         </div>
 
         <div className="mt-6">
-          {userId ? (
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={isSubmitting || selectedOptions.length === 0}
-            >
-              {isSubmitting ? "Submitting..." : "Submit Vote"}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              className="w-full"
-              onClick={() => router.push('/login')}
-            >
-              Login to Vote
-            </Button>
-          )}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isSubmitting || selectedOptions.length === 0}
+          >
+            {isSubmitting ? "Submitting..." : "Submit Vote"}
+          </Button>
         </div>
       </Card>
     </form>

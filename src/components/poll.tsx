@@ -12,7 +12,7 @@ import {
 import { formatDistanceToNow } from 'date-fns'
 import Link from "next/link"
 import { toast } from "sonner"
-import { createClient } from "@/utils/supabase/client"
+import { browserSupabase } from "@/lib/supabase/browser"
 
 interface PollProps {
   id: string
@@ -28,7 +28,7 @@ export function Poll({ id, title, description, createdAt, isOwner, optionsCount,
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this poll?')) return
 
-    const supabase = createClient()
+    const supabase = browserSupabase.getClient()
     const { error } = await supabase
       .from('polls')
       .delete()

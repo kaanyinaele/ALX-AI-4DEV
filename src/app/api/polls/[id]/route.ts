@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+import { serverSupabase } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
 export async function DELETE(
@@ -7,10 +6,9 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const cookieStore = cookies();
-    const supabase = createClient(cookieStore);
+    const supabase = serverSupabase.getClient();
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
       return new NextResponse("Unauthorized", { status: 401 });

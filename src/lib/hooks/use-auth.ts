@@ -2,7 +2,7 @@
  * Authentication-related React hooks
  */
 import { useState, useEffect } from "react";
-import { browserSupabase } from "../supabase";
+import { browserSupabase } from "../supabase/browser";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import type { User } from "../types";
@@ -77,7 +77,7 @@ export function useAuth() {
         email,
         password,
         options: {
-          emailRedirect: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 

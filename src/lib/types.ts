@@ -58,23 +58,15 @@ export interface Vote {
 }
 
 /**
- * User type definitions
+ * User type definitions (aligned with Supabase)
  */
 export interface User {
   id: string;
-  email: string;
+  email?: string;
 }
 
 export interface AuthResponse {
   user: User | null;
-  error: string | null;
-}
-
-/**
- * API response type definitions
- */
-export interface ApiResponse<T> {
-  data: T | null;
   error: string | null;
 }
 
@@ -112,4 +104,12 @@ export class NotFoundError extends ApplicationError {
     super(message, 'NOT_FOUND', 404);
     this.name = 'NotFoundError';
   }
+}
+
+/**
+ * API response type definitions
+ */
+export interface ApiResponse<T> {
+  data: T | null;
+  error: ApplicationError | null;
 }

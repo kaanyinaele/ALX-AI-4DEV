@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/utils/supabase/client";
+import { browserSupabase } from "@/lib/supabase/browser";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,7 +33,7 @@ export default function LoginPage() {
         throw new Error("Please fill in all fields");
       }
       
-      const supabase = createClient();
+      const supabase = browserSupabase.getClient();
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -56,7 +56,7 @@ export default function LoginPage() {
   const handleOAuthLogin = async (provider: "github" | "google") => {
     try {
       setIsLoading(true);
-      const supabase = createClient();
+      const supabase = browserSupabase.getClient();
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {

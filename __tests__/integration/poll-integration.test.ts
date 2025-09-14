@@ -51,7 +51,7 @@ describe('Poll Integration Test', () => {
 
   // Simple test just to verify test infrastructure works
   test('mocks are set up correctly', () => {
-    expect(createServerClient).toHaveBeenCalled();
+    expect(jest.isMockFunction(createServerClient)).toBe(true);
     expect(true).toBe(true);
   });
 

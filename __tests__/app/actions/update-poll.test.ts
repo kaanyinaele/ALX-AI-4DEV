@@ -85,7 +85,8 @@ describe('updatePoll', () => {
     const mockPollSelect = jest.fn().mockReturnValue({
       eq: jest.fn().mockReturnValue({
         single: jest.fn().mockResolvedValue({
-          data: { created_by: 'user-123' },
+          // Return a minimal shape that won't break the service when fetching at the end
+          data: { id: pollId, created_by: 'user-123' },
           error: null
         }),
       }),
@@ -108,38 +109,20 @@ describe('updatePoll', () => {
     
     const mockOptionsInsert = jest.fn().mockResolvedValue({ error: null });
     
-    // Track which table/operation is being requested to return appropriate mock
-    let pollsCallCount = 0;
-    let optionsCallCount = 0;
-    
-    // Create a Supabase mock with specific implementations for each function
+    // Create a Supabase mock with both select and update exposed for polls to support multiple calls
     const mockSupabase = {
       auth: {
         getUser: jest.fn().mockResolvedValue({ data: { user: mockUser }, error: null }),
       },
       from: jest.fn().mockImplementation((table) => {
         if (table === 'polls') {
-          pollsCallCount++;
-          if (pollsCallCount === 1) {
-            // First call checks ownership
-            return { select: mockPollSelect };
-          } else {
-            // Second call updates poll
-            return { update: mockPollUpdate };
-          }
-        } 
-        else if (table === 'poll_options') {
-          optionsCallCount++;
-          if (optionsCallCount === 1) {
-            // First call gets existing options
-            return { select: mockOptionsSelect };
-          } else if (optionsCallCount === 2) {
-            // Second call deletes removed options
-            return { delete: mockOptionsDelete };
-          } else {
-            // Third call inserts new options
-            return { insert: mockOptionsInsert };
-          }
+          return { select: mockPollSelect, update: mockPollUpdate };
+        } else if (table === 'poll_options') {
+          return {
+            select: mockOptionsSelect,
+            delete: mockOptionsDelete,
+            insert: mockOptionsInsert,
+          };
         }
         return {};
       }),

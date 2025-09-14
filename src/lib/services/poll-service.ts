@@ -1,21 +1,17 @@
 /**
  * Poll service - Contains business logic for poll operations
  */
-import { 
-  serverSupabase, 
-  executeWithRetry 
-} from "../supabase";
-import { handleError, withErrorHandling } from "../utils/error-handling";
+import { serverSupabase } from "../supabase/server";
+import { executeWithRetry } from "../supabase/shared";
+import { withErrorHandling } from "../utils/error-handling";
 import type { 
   ApiResponse, 
   Poll, 
   PollFormData, 
-  PollOption, 
   PollWithOptions,
-  PollWithVoteCounts,
-  UnauthorizedError,
-  NotFoundError
+  PollWithVoteCounts
 } from "../types";
+import { UnauthorizedError, NotFoundError } from "../types";
 
 /**
  * Service for poll-related operations
@@ -48,7 +44,7 @@ export class PollService {
       if (!poll) throw new Error("Failed to create poll");
 
       // Insert options
-      const options = data.options.map(option => ({
+      const options = data.options.map((option: string) => ({
         poll_id: poll.id,
         option_text: option,
       }));
@@ -81,7 +77,7 @@ export class PollService {
 
       if (pollError) throw pollError;
       if (!poll) throw new NotFoundError("Poll not found");
-      if (poll.created_by !== userId) throw new UnauthorizedError("You don't have permission to update this poll");
+      if ((poll as { created_by: string }).created_by !== userId) throw new UnauthorizedError();
 
       // Update poll
       const { error: updateError } = await executeWithRetry(() => 
@@ -108,9 +104,9 @@ export class PollService {
       );
 
       // Delete removed options
-      const optionTexts = new Set(data.options);
-      const optionsToDelete = existingOptions?.filter(
-        option => !optionTexts.has(option.option_text)
+      const optionTexts = new Set<string>(data.options);
+      const optionsToDelete = (existingOptions as Array<{ id: string; option_text: string }> | null)?.filter(
+        (option: { id: string; option_text: string }) => !optionTexts.has(option.option_text)
       ) || [];
 
       if (optionsToDelete.length > 0) {
@@ -118,17 +114,17 @@ export class PollService {
           supabase
             .from("poll_options")
             .delete()
-            .in("id", optionsToDelete.map(o => o.id))
+            .in("id", optionsToDelete.map((o: { id: string }) => o.id))
         );
 
         if (deleteError) throw deleteError;
       }
 
       // Add new options
-      const existingTexts = new Set(existingOptions?.map(o => o.option_text) || []);
+      const existingTexts = new Set<string>(((existingOptions as Array<{ option_text: string }> | null) || []).map((o: { option_text: string }) => o.option_text));
       const newOptions = data.options
-        .filter(text => !existingTexts.has(text))
-        .map(option_text => ({
+        .filter((text: string) => !existingTexts.has(text))
+        .map((option_text: string) => ({
           poll_id: pollId,
           option_text,
         }));
@@ -151,7 +147,7 @@ export class PollService {
       );
 
       if (getError) throw getError;
-      return updatedPoll;
+      return updatedPoll as Poll;
     });
   }
 
@@ -298,7 +294,7 @@ export class PollService {
       }
 
       // Submit votes
-      const votes = optionIds.map(optionId => ({
+      const votes = optionIds.map((optionId: string) => ({
         poll_id: pollId,
         option_id: optionId,
         voter_id: userId,

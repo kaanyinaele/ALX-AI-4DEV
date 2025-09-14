@@ -2,9 +2,10 @@
  * Poll-related React hooks
  */
 import { useState, useEffect } from "react";
-import { browserSupabase } from "../supabase";
+import { browserSupabase } from "../supabase/browser";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { castVoteClient, getPollResultsClient } from "../services/poll-client";
 import type { 
   Poll, 
   PollOption, 
@@ -96,6 +97,7 @@ export function usePollVoting(poll: {
     isSubmitting,
     handleOptionChange,
     handleSubmit,
+    castVoteClient,
   };
 }
 
@@ -185,4 +187,12 @@ export function usePollData(pollId: string) {
   }, [pollId]);
 
   return { poll, loading, error };
+}
+
+/**
+ * Fetch poll results (vote counts) on the client for a given poll ID.
+ * Returns: ApiResponse with { pollId, options: [{ id, option_text, count }] }
+ */
+export async function fetchPollResults(pollId: string) {
+  return getPollResultsClient(pollId);
 }

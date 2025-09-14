@@ -1,6 +1,6 @@
 "use client";
 
-import { createClient } from "@/utils/supabase/client";
+import { browserSupabase } from "@/lib/supabase/browser";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,7 +36,7 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const supabase = createClient();
+      const supabase = browserSupabase.getClient();
       const { error } = await supabase.auth.signUp({
         email: data.email,
         password: data.password,
@@ -62,7 +62,7 @@ export default function RegisterPage() {
   const handleOAuthRegister = async (provider: "github" | "google") => {
     try {
       setIsLoading(true);
-      const supabase = createClient();
+      const supabase = browserSupabase.getClient();
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {

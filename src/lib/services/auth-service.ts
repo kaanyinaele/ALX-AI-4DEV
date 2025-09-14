@@ -1,12 +1,9 @@
 /**
  * Auth service - Contains business logic for authentication operations
  */
-import { 
-  serverSupabase, 
-  browserSupabase, 
-  executeWithRetry 
-} from "../supabase";
-import { handleError, withErrorHandling } from "../utils/error-handling";
+import { browserSupabase } from "../supabase/browser";
+import { executeWithRetry } from "../supabase/shared";
+import { withErrorHandling } from "../utils/error-handling";
 import type { ApiResponse, AuthResponse, User } from "../types";
 
 /**
@@ -14,36 +11,15 @@ import type { ApiResponse, AuthResponse, User } from "../types";
  */
 export class AuthService {
   /**
-   * Gets the currently logged-in user (server-side)
-   */
-  static async getCurrentUser(): Promise<ApiResponse<User | null>> {
-    return await withErrorHandling(async () => {
-      const supabase = serverSupabase.getClient();
-      
-      const { data: { user }, error } = await executeWithRetry(() => 
-        supabase.auth.getUser()
-      );
-
-      if (error) throw error;
-      
-      return user;
-    });
-  }
-
-  /**
    * Gets the currently logged-in user (client-side)
    */
   static async getClientUser(): Promise<ApiResponse<User | null>> {
     return await withErrorHandling(async () => {
       const supabase = browserSupabase.getClient();
-      
-      const { data: { user }, error } = await executeWithRetry(() => 
-        supabase.auth.getUser()
-      );
-
+      const { data, error } = await executeWithRetry(() => supabase.auth.getUser());
       if (error) throw error;
-      
-      return user;
+      const u = data?.user ? { id: data.user.id, email: data.user.email ?? undefined } : null;
+      return u;
     });
   }
 
@@ -51,25 +27,20 @@ export class AuthService {
    * Signs in with email and password
    */
   static async signInWithPassword(
-    email: string, 
+    email: string,
     password: string
   ): Promise<ApiResponse<AuthResponse>> {
     return await withErrorHandling(async () => {
       const supabase = browserSupabase.getClient();
-      
-      const { data, error } = await executeWithRetry(() => 
+      const { data, error } = await executeWithRetry(() =>
         supabase.auth.signInWithPassword({
           email,
           password,
         })
       );
-
       if (error) throw error;
-      
-      return {
-        user: data?.user || null,
-        error: null,
-      };
+      const user = data?.user ? { id: data.user.id, email: data.user.email ?? undefined } : null;
+      return { user, error: null };
     });
   }
 
@@ -77,28 +48,23 @@ export class AuthService {
    * Signs up with email and password
    */
   static async signUp(
-    email: string, 
+    email: string,
     password: string
   ): Promise<ApiResponse<AuthResponse>> {
     return await withErrorHandling(async () => {
       const supabase = browserSupabase.getClient();
-      
-      const { data, error } = await executeWithRetry(() => 
+      const { data, error } = await executeWithRetry(() =>
         supabase.auth.signUp({
           email,
           password,
           options: {
-            emailRedirect: `${window.location.origin}/auth/callback`,
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
           },
         })
       );
-
       if (error) throw error;
-      
-      return {
-        user: data?.user || null,
-        error: null,
-      };
+      const user = data?.user ? { id: data.user.id, email: data.user.email ?? undefined } : null;
+      return { user, error: null };
     });
   }
 
@@ -108,13 +74,8 @@ export class AuthService {
   static async signOut(): Promise<ApiResponse<boolean>> {
     return await withErrorHandling(async () => {
       const supabase = browserSupabase.getClient();
-      
-      const { error } = await executeWithRetry(() => 
-        supabase.auth.signOut()
-      );
-
+      const { error } = await executeWithRetry(() => supabase.auth.signOut());
       if (error) throw error;
-      
       return true;
     });
   }

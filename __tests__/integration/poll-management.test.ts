@@ -7,9 +7,9 @@
  * 3. Verifying that both operations work correctly together
  */
 
-import { createPoll } from '../../../src/app/actions/create-poll';
-import { updatePoll } from '../../../src/app/actions/update-poll';
-import { PollFormData } from '../../../src/lib/schemas/poll';
+import { createPoll } from '../../src/app/actions/create-poll';
+import { updatePoll } from '../../src/app/actions/update-poll';
+import { PollFormData } from '../../src/lib/schemas/poll';
 import { createServerClient } from '@supabase/ssr';
 
 // Mock modules are already set up in __tests__/setup.ts
@@ -195,15 +195,15 @@ describe('Poll management flow integration', () => {
     
     // Get the current supabase mock
     const supabase = createServerClient();
-    
-    // Get the mocked options
-    const mockFrom = supabase.from;
-    const optionsAfterUpdate = await mockFrom('poll_options').select().eq().data;
+    const mockFrom = supabase.from as any;
+    const { data: optionsAfterUpdate } = await mockFrom('poll_options').select().eq('poll_id', pollId);
+    expect(optionsAfterUpdate).toBeDefined();
+    const opts = optionsAfterUpdate as Array<{ option_text: string }>;
     
     // Verify the options were correctly modified
-    expect(optionsAfterUpdate.length).toBe(2);
-    expect(optionsAfterUpdate.some(opt => opt.option_text === 'Second Option')).toBe(true);
-    expect(optionsAfterUpdate.some(opt => opt.option_text === 'Third Option')).toBe(true);
-    expect(optionsAfterUpdate.some(opt => opt.option_text === 'First Option')).toBe(false);
+    expect(opts.length).toBe(2);
+    expect(opts.some(opt => opt.option_text === 'Second Option')).toBe(true);
+    expect(opts.some(opt => opt.option_text === 'Third Option')).toBe(true);
+    expect(opts.some(opt => opt.option_text === 'First Option')).toBe(false);
   });
 });

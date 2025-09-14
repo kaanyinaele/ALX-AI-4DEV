@@ -1,5 +1,4 @@
-import { createClient } from "@/utils/supabase/server"
-import { cookies } from "next/headers"
+import { serverSupabase } from "@/lib/supabase/server"
 import { notFound, redirect } from "next/navigation"
 import { EditPollClientPage } from "@/components/edit-poll-client-page"
 
@@ -8,11 +7,10 @@ export default async function EditPollPage({
 }: {
   params: { id: string }
 }) {
-  const cookieStore = cookies()
-  const supabase = createClient(cookieStore)
+  const supabase = serverSupabase.getClient()
 
   // Check authentication
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
   if (!user) {
     redirect('/login')
   }

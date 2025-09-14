@@ -1,13 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { Poll } from '@/components/poll';
-import { createClient } from '@/utils/supabase/server';
+import { serverSupabase } from '@/lib/supabase/server';
 import Link from 'next/link';
-import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
 export default async function PollsPage() {
-  const cookieStore = cookies();
-  const supabase = createClient(cookieStore);
+  const supabase = serverSupabase.getClient();
 
   const { data: { user }, error: userError } = await supabase.auth.getUser();
 
