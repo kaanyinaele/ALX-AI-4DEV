@@ -1,59 +1,42 @@
 'use server'
 
-import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
-import { createServerClient } from '@supabase/ssr'
-import { type PollFormData } from '@/lib/schemas/poll'
+import { PollService } from '@/lib/services/poll-service'
+import { AuthService } from '@/lib/services/auth-service'
+import { type PollFormData } from '@/lib/types'
+import { UnauthorizedError } from '@/lib/types'
+import { handleError } from '@/lib/utils/error-handling'
 
+/**
+ * Server action to create a new poll
+ */
 export async function createPoll(data: PollFormData) {
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value
-        },
-        set(name: string, value: string, options: any) {
-          cookieStore.set({ name, value, ...options })
-        },
-        remove(name: string, options: any) {
-          cookieStore.set({ name, value: '', ...options })
-        },
-      },
+  try {
+    // Get current user
+    const { data: user, error: userError } = await AuthService.getCurrentUser()
+    
+    if (userError || !user) {
+      throw new UnauthorizedError('You must be logged in to create a poll')
     }
-  )
-  
-  const { data: { user }, error: authError } = await supabase.auth.getUser()
-  if (authError || !user) throw new Error('Unauthorized')
-
-  const { data: poll, error: pollError } = await supabase
-    .from('polls')
-    .insert({
-      title: data.title,
-      description: data.description,
-      created_by: user.id,
-      is_multiple_choice: data.isMultipleChoice,
-      is_anonymous: data.isAnonymous,
-      expires_at: data.expiresAt,
+    
+    // Create poll
+    const { data: poll, error: pollError } = await PollService.createPoll(data, user.id)
+    
+    if (pollError) {
+      throw pollError
+    }
+    
+    // Invalidate cache
+    revalidatePath('/polls')
+    
+    return { poll }
+  } catch (error) {
+    // Handle and log errors
+    const formattedError = handleError(error, { 
+      action: 'createPoll',
+      pollData: { title: data.title }
     })
-    .select()
-    .single()
-
-  if (pollError) throw pollError
-
-  const options = data.options.map(option => ({
-    poll_id: poll.id,
-    option_text: option,
-  }))
-
-  const { error: optionsError } = await supabase
-    .from('poll_options')
-    .insert(options)
-
-  if (optionsError) throw optionsError
-
-  revalidatePath('/polls')
-  return { poll }
+    
+    throw formattedError
+  }
 }
